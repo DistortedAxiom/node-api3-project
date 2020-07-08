@@ -8,7 +8,7 @@ const userRouter = require("./users/userRouter.js");
 
 server.use(express.json());
 
-server.use(morgan('dev'));
+server.use(morgan('combined'));
 
 server.use("/api/posts", postRouter);
 server.use("/api/users", userRouter);

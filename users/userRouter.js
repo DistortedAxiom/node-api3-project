@@ -4,6 +4,7 @@ const router = express.Router();
 
 const Users = require("./userDb.js");
 const Posts = require("../posts/postDb");
+const e = require('express');
 
 
 router.post('/', validateUser, (req, res) => {
@@ -26,7 +27,7 @@ router.post('/:id/posts', validateUserId, validatePost, (req, res) => {
 
   Posts.insert({text, user_id: id})
     .then((post) => {
-      res.status(200).json(post)
+      res.status(201).json(post)
     })
     .catch((err) => {
       console.log(err)
@@ -73,14 +74,47 @@ router.get('/:id/posts', validateUserId, (req, res) => {
 
 });
 
-router.delete('/:id', (req, res) => {
-  // do your magic!
+router.delete('/:id', validateUserId, async (req, res) => {
+  const {id} = req.params;
+
+  await Users.getById(id)
+    .then((user) => {
+      if (Object.keys(user).length > 0 ) {
+        Users.remove(id)
+          .then((response) => {
+            res.status(200).json(user)
+          })
+          .catch((err) => {
+            console.log(err)
+            res.status(500).json({message: "User cannot be deleted"})
+          })
+      }
+      else {
+        res.status(400).json({message: "Cannot find user"})
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).json({message: "Error in deleting user"})
+    })
 });
 
-router.put('/:id', (req, res) => {
-  // do your magic!
-});
+router.put('/:id', validateUserId, validateUser, (req, res) => {
+  const {name} = req.body;
+  const {id} = req.params;
 
+
+  Users.update(id, {name})
+    .then(() => {
+      Users.getById(id)
+        .then((user) => {
+          res.status(200).json(user)
+        })
+    })
+    .catch((err) => {
+      res.status(500).json({message: "Error in updating the user"})
+    })
+})
 //custom middleware
 
 function validateUserId(req, res, next) {
@@ -103,12 +137,13 @@ function validateUserId(req, res, next) {
 }
 
 function validateUser(req, res, next) {
-  const {userBody} = req.body;
+  const userBody = req.body.name;
+  console.log(userBody)
 
-  if (userBody.length == 0) {
+  if (Object.keys(req.body).length === 0 ) {
     res.status(400).json({ message: "missing user data" });
   }
-  else if ((userBody.name).length == 0) {
+  else if ((userBody).length == 0) {
     res.status(400).json({ message: "missing required name field" });
   }
   else {
